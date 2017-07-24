@@ -109,3 +109,124 @@ eaf_create_argument_list(Expression *expression)
 
     return al;
 }
+ArgumentList *
+eaf_chain_argument_list(ArgumentList *list, Expression *expr)
+{
+    ArgumentList *pos;
+
+    for (pos = list; pos->next; pos = pos->next)
+        ;
+    pos->next = eaf_create_argument_list(expr);
+
+    return list;
+}
+StatementList *
+eaf_create_statement_list(Statement *statement)
+{
+    StatementList *sl;
+
+    sl = eaf_malloc(sizeof(StatementList));
+    sl->statement = statement;
+    sl->next = NULL;
+
+    return sl;
+}
+StatementList *
+eaf_chain_statement_list(StatementList *list, Statement *statement)
+{
+    StatementList *pos;
+
+    if (list == NULL)
+        return eaf_create_statement_list(statement);
+
+    for (pos = list; pos->next; pos = pos->next)
+        ;
+    pos->next = eaf_create_statement_list(statement);
+
+    return list;
+}
+Expression *
+eaf_alloc_expression(ExpressionKind kind)
+{
+    Expression  *exp;
+
+    exp = eaf_malloc(sizeof(Expression));
+    exp->type = NULL;
+    exp->kind = kind;
+    exp->line_number = eaf_get_current_compiler()->current_line_number;
+
+    return exp;
+}
+Expression *
+eaf_create_comma_expression(Expression *left, Expression *right)
+{
+    Expression *exp;
+
+    exp = eaf_alloc_expression(COMMA_EXPRESSION);
+    exp->u.comma.left = left;
+    exp->u.comma.right = right;
+
+    return exp;
+}
+Expression *
+eaf_create_assign_expression(Expression *left, AssignmentOperator operator,
+                            Expression *operand)
+{
+    Expression *exp;
+
+    exp = eaf_alloc_expression(ASSIGN_EXPRESSION);
+    exp->u.assign_expression.left = left;
+    exp->u.assign_expression.operator = operator;
+    exp->u.assign_expression.operand = operand;
+
+    return exp;
+}
+Expression *
+eaf_create_binary_expression(ExpressionKind operator,
+                             Expression *left, Expression *right)
+{
+#if 0
+    if ((left->kind == INT_EXPRESSION
+         || left->kind == DOUBLE_EXPRESSION)
+        && (right->kind == INT_EXPRESSION
+            || right->kind == DOUBLE_EXPRESSION)) {
+        EAF_Value v;
+        v = eaf_eval_binary_expression(eaf_get_current_compiler(),
+                                       NULL, operator, left, right);
+        /* Overwriting left hand expression. */
+        *left = convert_value_to_expression(&v);
+
+        return left;
+    } else {
+#endif
+        Expression *exp;
+        exp = eaf_alloc_expression(operator);
+        exp->u.binary_expression.left = left;
+        exp->u.binary_expression.right = right;
+        return exp;
+#if 0
+    }
+#endif
+}
+Expression *
+eaf_create_minus_expression(Expression *operand)
+{
+#if 0
+    if (operand->kind == INT_EXPRESSION
+        || operand->kind == DOUBLE_EXPRESSION) {
+        EAF_Value       v;
+        v = eaf_eval_minus_expression(eaf_get_current_compiler(),
+                                      NULL, operand);
+        /* Notice! Overwriting operand expression. */
+        *operand = convert_value_to_expression(&v);
+        return operand;
+    } else {
+#endif
+        Expression      *exp;
+        exp = eaf_alloc_expression(MINUS_EXPRESSION);
+        exp->u.minus_expression = operand;
+        return exp;
+#if 0
+    }
+#endif
+}
