@@ -73,3 +73,39 @@ void eaf_define_function(EVM_BasicType type,char *identifier,ParameterList *para
         compiler->function_list = fd;
     }
 }
+ParameterList *
+eaf_create_parameter(EVM_BasicType type, char *identifier)
+{
+    ParameterList       *p;
+
+    p = eaf_malloc(sizeof(ParameterList));
+    p->name = identifier;
+    p->type = eaf_alloc_type_specifier(type);
+    p->line_number = eaf_get_current_compiler()->current_line_number;
+    p->next = NULL;
+
+    return p;
+}
+ParameterList *
+eaf_chain_parameter(ParameterList *list, EVM_BasicType type,
+                    char *identifier)
+{
+    ParameterList *pos;
+
+    for (pos = list; pos->next; pos = pos->next)
+        ;
+    pos->next = eaf_create_parameter(type, identifier);
+
+    return list;
+}
+ArgumentList *
+eaf_create_argument_list(Expression *expression)
+{
+    ArgumentList *al;
+
+    al = eaf_malloc(sizeof(ArgumentList));
+    al->expression = expression;
+    al->next = NULL;
+
+    return al;
+}
