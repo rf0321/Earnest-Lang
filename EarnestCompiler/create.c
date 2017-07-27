@@ -230,3 +230,261 @@ eaf_create_minus_expression(Expression *operand)
     }
 #endif
 }
+Expression *
+eaf_create_logical_not_expression(Expression *operand)
+{
+    Expression  *exp;
+
+    exp = eaf_alloc_expression(LOGICAL_NOT_EXPRESSION);
+    exp->u.logical_not = operand;
+
+    return exp;
+}
+Expression *
+eaf_create_incdec_expression(Expression *operand, ExpressionKind inc_or_dec)
+{
+    Expression *exp;
+
+    exp = eaf_alloc_expression(inc_or_dec);
+    exp->u.inc_dec.operand = operand;
+
+    return exp;
+}
+Expression *
+eaf_create_identifier_expression(char *identifier)
+{
+    Expression  *exp;
+
+    exp = eaf_alloc_expression(IDENTIFIER_EXPRESSION);
+    exp->u.identifier.name = identifier;
+
+    return exp;
+}
+Expression *
+eaf_create_function_call_expression(Expression *function,ArgumentList *argument)
+{
+    Expression  *exp;
+
+    exp = eaf_alloc_expression(FUNCTION_CALL_EXPRESSION);
+    exp->u.function_call_expression.function = function;
+    exp->u.function_call_expression.argument = argument;
+
+    return exp;
+}
+Expression *
+eaf_create_boolean_expression(EVM_Boolean value)
+{
+    Expression *exp;
+
+    exp = eaf_alloc_expression(BOOLEAN_EXPRESSION);
+    exp->u.boolean_value = value;
+
+    return exp;
+}
+static Statement *
+alloc_statement(StatementType type)
+{
+    Statement *st;
+
+    st = eaf_malloc(sizeof(Statement));
+    st->type = type;
+    st->line_number = eaf_get_current_compiler()->current_line_number;
+
+    return st;
+}
+Statement *
+eaf_create_if_statement(Expression *condition,
+                        Block *then_block, Elsif *elsif_list,
+                        Block *else_block)
+{
+    Statement *st;
+
+    st = alloc_statement(IF_STATEMENT);
+    st->u.if_s.condition = condition;
+    st->u.if_s.then_block = then_block;
+    st->u.if_s.elsif_list = elsif_list;
+    st->u.if_s.else_block = else_block;
+
+    return st;
+}
+Elsif *
+eaf_chain_elsif_list(Elsif *list, Elsif *add)
+{
+    Elsif *pos;
+
+    for (pos = list; pos->next; pos = pos->next)
+        ;
+    pos->next = add;
+
+    return list;
+}
+Elsif *
+eaf_create_elsif(Expression *expr, Block *block)
+{
+    Elsif *ei;
+
+    ei = eaf_malloc(sizeof(Elsif));
+    ei->condition = expr;
+    ei->block = block;
+    ei->next = NULL;
+
+    return ei;
+}
+Statement *
+eaf_create_while_statement(char *label,
+                           Expression *condition, Block *block)
+{
+    Statement *st;
+
+    st = alloc_statement(WHILE_STATEMENT);
+    st->u.while_s.label = label;
+    st->u.while_s.condition = condition;
+    st->u.while_s.block = block;
+    block->type = WHILE_STATEMENT_BLOCK;
+    block->parent.statement.statement = st;
+
+    return st;
+}
+Statement *
+eaf_create_for_statement(char *label, Expression *init, Expression *cond,
+                         Expression *post, Block *block)
+{
+    Statement *st;
+
+    st = alloc_statement(FOR_STATEMENT);
+    st->u.for_s.label = label;
+    st->u.for_s.init = init;
+    st->u.for_s.condition = cond;
+    st->u.for_s.post = post;
+    st->u.for_s.block = block;
+    block->type = FOR_STATEMENT_BLOCK;
+    block->parent.statement.statement = st;
+
+    return st;
+}
+Statement *
+eaf_create_foreach_statement(char *label, char *variable,
+                             Expression *collection, Block *block)
+{
+    Statement *st;
+
+    st = alloc_statement(FOREACH_STATEMENT);
+    st->u.foreach_s.label = label;
+    st->u.foreach_s.variable = variable;
+    st->u.foreach_s.collection = collection;
+    st->u.for_s.block = block;
+
+    return st;
+}
+Block *
+eaf_open_block(void)
+{
+    Block *new_block;
+
+    EAF_Compiler *compiler = eaf_get_current_compiler();
+    new_block = eaf_malloc(sizeof(Block));
+    new_block->type = UNDEFINED_BLOCK;
+    new_block->outer_block = compiler->current_block;
+    new_block->declaration_list = NULL;
+    compiler->current_block = new_block;
+
+    return new_block;
+}
+Block *
+eaf_close_block(Block *block, StatementList *statement_list)
+{
+    EAF_Compiler *compiler = eaf_get_current_compiler();
+
+    DBG_assert(block == compiler->current_block,
+               ("block mismatch.\n"));
+    block->statement_list = statement_list;
+    compiler->current_block = block->outer_block;
+
+    return block;
+}
+Statement *
+eaf_create_expression_statement(Expression *expression)
+{
+    Statement *st;
+
+    st = alloc_statement(EXPRESSION_STATEMENT);
+    st->u.expression_s = expression;
+
+    return st;
+}
+
+Statement *
+eaf_create_return_statement(Expression *expression)
+{
+    Statement *st;
+
+    st = alloc_statement(RETURN_STATEMENT);
+    st->u.return_s.return_value = expression;
+
+    return st;
+}
+
+Statement *
+eaf_create_break_statement(char *label)
+{
+    Statement *st;
+
+    st = alloc_statement(BREAK_STATEMENT);
+    st->u.break_s.label = label;
+
+    return st;
+}
+
+Statement *
+eaf_create_continue_statement(char *label)
+{
+    Statement *st;
+
+    st = alloc_statement(CONTINUE_STATEMENT);
+    st->u.continue_s.label = label;
+
+    return st;
+}
+Statement *
+eaf_create_try_statement(Block *try_block, char *exception,
+                         Block *catch_block, Block *finally_block)
+{
+    Statement *st;
+
+    st = alloc_statement(TRY_STATEMENT);
+    st->u.try_s.try_block = try_block;
+    st->u.try_s.catch_block = catch_block;
+    st->u.try_s.exception = exception;
+    st->u.try_s.finally_block = finally_block;
+
+    return st;
+}
+
+Statement *
+eaf_create_throw_statement(Expression *expression)
+{
+    Statement *st;
+
+    st = alloc_statement(THROW_STATEMENT);
+    st->u.throw_s.exception = expression;
+
+    return st;
+}
+
+Statement *
+eaf_create_declaration_statement(EVM_BasicType type, char *identifier,
+                                 Expression *initializer)
+{
+    Statement *st;
+    Declaration *decl;
+
+    st = alloc_statement(DECLARATION_STATEMENT);
+
+    decl = eaf_alloc_declaration(dkc_alloc_type_specifier(type), identifier);
+
+    decl->initializer = initializer;
+
+    st->u.declaration_s = decl;
+
+    return st;
+}
